@@ -89,6 +89,5 @@ def network_growth(market_sentiment,staking_rate_other,deposit_rate,CAR,usage_gr
 
         network_growth[t] = network_growth[t-1] + dnetwork  * (1 - abs((np.sign(dnetwork)-1)/2) * stakers_share[t] ) 
 
-        
         t+=1
     return(network_growth)
