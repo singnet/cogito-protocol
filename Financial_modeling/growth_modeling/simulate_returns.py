@@ -26,9 +26,9 @@ def catastrophic_event(probability):
 ### ltr_default_prob: Long term default probability of our staking protocol. In the long run, we expect the probability of default to decrease due to increased security and regulation.
 ### starting_staking_rate: what is the staking rate that we can get on the market currently (at the start of our stablecoin trading).
 ### r_t_sigma: volatility of current staking rate (that is besides the volatility of the long term rate).
-### ltr_vol: volatility of the long term staking rate .
 ### sigma_market_time: we might have bull or bear market and that is determined by market_time. However, when that happens is in some way left to random. sigma_market_time is that random, the higher it is the more volatility we have in that.
 ### max_prob: this is the meximum amount we have staked in one protocol.
+### sigma_b: volatility of the long term rate. Estimated.
 
 
 

@@ -76,8 +76,7 @@ def network_growth(market_sentiment,staking_rate_other,deposit_rate,CAR,usage_gr
     c_usage_growth = 5.2
     sigma_ngrowth = 1
     growth_vol = np.random.standard_t(5, size=T)
-    
-    
+
     t=1
     while t<T:
         indx_growth[t] = sum(index_appreciation[t:(31*24*3+t)])
