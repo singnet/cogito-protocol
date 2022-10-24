@@ -342,7 +342,7 @@ def larger_sim(low_ret,mid_ret,high_ret,incoming_price,market_sentiment,staking_
     indx_factor = 2
     CAR_ratio = 1.5
     Cmomentum = 2.6
-    deposit_profit = 5
+    deposit_profit = 2
     lastmonth = np.zeros(T)
     lastmonth[0] = 0
     mkt_constant = 0.55 ### We change this one because we are more pessimistic about the market growth going forward.
@@ -416,6 +416,7 @@ def larger_sim(low_ret,mid_ret,high_ret,incoming_price,market_sentiment,staking_
     
     CAR_below075 = False
     liq_problem = False ### Is our liquidity bellow 2%?
+    CAR_below05 = False
     
     t=1
     while t<T:
@@ -425,9 +426,21 @@ def larger_sim(low_ret,mid_ret,high_ret,incoming_price,market_sentiment,staking_
         weighted_liabilities = percentage_deposited[t-1] * liabilities_base[t-1] * 0.88 + (1-percentage_deposited[t-1]) * liabilities_base[t-1]
         CAR[t] = weighted_assets/weighted_liabilities
         
-        if CAR[t]<0.5:
+        
+        ### If CAR is below 50%, then we reset the index:
+        if CAR_below05:
+            print("We reset our price","in time",t)
+            price[t:] = price[t:] * CAR[t]
+        
+        
+        if CAR[t]>0.5:
+            if CAR_below05:
+                CAR_below05 = False
+        else:
+            if not CAR_below05:
+                print("our CAR has dropped below 50%","in time",t)
+                CAR_below05 = True
             
-            print("our CAR has dropped below 50%","in time",t)
             #price[t:] = price[t:] * CAR[t]
 
         #### Check if our CAR is low and if yes, then we set index growth to 0:
@@ -465,6 +478,9 @@ def larger_sim(low_ret,mid_ret,high_ret,incoming_price,market_sentiment,staking_
             deposit_rewards[t],investments_daily,liquid_reserve[t-1]  =  rebalance_assets(available_liquidity = daily_assets_ret,CAR = CAR,treasury = liabilities_base,liquid = liquid_reserve[t-1],our_index = t-1,rule =dist_asset)
             ### Great, now we know the exact amounts of investments that we make that day.
             
+            ### We adjust the amount of investments that we make:
+            investments_daily += deposit_rewards[t]
+            
             ### Now that we have investments, we spread the risk:
             lrisk_pool, mrisk_pool, hrisk_pool = spread_risk(inv_amount = investments_daily,CAR = CAR,our_indx = t, lrisk_pool = lrisk_pool,mrisk_pool = mrisk_pool,hrisk_pol = hrisk_pool)
             
@@ -492,7 +508,7 @@ def larger_sim(low_ret,mid_ret,high_ret,incoming_price,market_sentiment,staking_
             
 
         market_growth = (market_sentiment[t])**(-(np.sign((market_sentiment[t] - market_sentiment[t-1]))-1)/2) * (abs(market_sentiment[t]+1))**((np.sign((market_sentiment[t] - market_sentiment[t-1]))+1)/2)  * mkt_constant  
-        volatility = growth_vol[t] * sigma_ngrowth * dt
+        volatility = network_growth[t-1] * growth_vol[t] * sigma_ngrowth * dt
         dnetwork = indx_growth[t] * indx_factor * network_growth[t-1] * dt + ((collateral[t-1] - 1)/collateral[t-1]) * CAR_ratio * network_growth[t-1] * dt +lastmonth[t] * Cmomentum * network_growth[t-1] * dt + market_growth* network_growth[t-1] * dt + (deposit_rate[t] + indx_growth[t] - staking_rate_other[t] ) * deposit_profit * network_growth[t-1] * dt + usage_growth[t] * c_usage_growth * network_growth[t-1] * dt + volatility - bank_run[t] * network_growth[t-1] ### Bank run shows the amount of lost in our specific hour.
         
         stakers_share[t] = percentage_deposited[t-1] * 1### Updating the amount of stakers.
@@ -585,7 +601,9 @@ def larger_sim(low_ret,mid_ret,high_ret,incoming_price,market_sentiment,staking_
         #liquid_reserve[t] = liquid_reserve[t -1] + daily_assets
         if t>=(365*24-1): ### After 1 year, we calculate deposit rates as well:
             nr_tokens[t] = nr_tokens[t] + value_locked_appreciated[-1] - value_locked[-1]
-            liquid_reserve[t] = liquid_reserve[t] + our_deposits[-1]
+            ### We delete the addition of deposits to liquid reserve because now we no longer need that. We have invested that amount
+            ### anyway.
+            #liquid_reserve[t] = liquid_reserve[t] + our_deposits[-1]
             total_deposit_returns[t] = total_deposit_returns[t-1] +  value_locked_appreciated[-1] - value_locked[-1]
             value_locked_appreciated[-1] = 0
             value_locked[-1] = 0
@@ -604,7 +622,7 @@ def larger_sim(low_ret,mid_ret,high_ret,incoming_price,market_sentiment,staking_
         
         our_deposits[0] = deposit_sum[t-1] * deposits[t]
         deposit_sum[t] = deposit_sum[t-1] - our_deposits[0]
-        value_locked_appreciated[0] = (our_deposits[0]/dep_rate[t]) / price[t] ### Diving by the price of the index, so we calculate the amount of tokens deposited appropriately!
+        value_locked_appreciated[0] = (our_deposits[0]/dep_rate[t]) / price[t] ### Dividing by the price of the index, so we calculate the amount of tokens deposited appropriately!
         value_locked[0] = (our_deposits[0]/dep_rate[t]) / price[t]
         total_deposited_tokens[t] = total_deposited_tokens[t-1] + value_locked[0]  ### That is not necessary to track anymore, but we are leaving it for possible debugging purposes in the future.
         total_staked_USD[t] = total_staked_USD[t-1] + our_deposits[0]
