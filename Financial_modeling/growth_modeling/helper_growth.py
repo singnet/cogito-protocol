@@ -58,6 +58,7 @@ def network_growth(market_sentiment,staking_rate_other,deposit_rate,CAR,usage_gr
     T=24*365*5
     dt = 1/(365*24)
     
+    volatility = 0
     network_growth = np.zeros(T)
     network_growth[0] = np.random.uniform(starting_network_lower,starting_network_upper) ### Random number
     #indx_growth = 0#0.01 ### How much the index will grow on a yearly basis.
