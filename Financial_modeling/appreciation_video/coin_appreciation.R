@@ -37,24 +37,27 @@ plotted_data <- melt(plotted_data,id.vars=c("date"),measured.vars=c("EUR","Dolla
 
 p <- ggplot(data = plotted_data, mapping = aes(x = date, y = value,group = variable, colour = variable)) +
   geom_line() +
-  labs(x = "Date", y = "USD value", 
-       title = "Appreciation of G-coin and Euro versus the dollar over time") +
+  labs(x = "Year", y = "USD value", 
+       title = "G-coin/ Euro appreciation vs US Dollar") +
   geom_text(aes(label = variable), vjust = 0) +
-  scale_color_manual(values=c("#D1AC00", "#F47D20","#0C1618")) +
-  theme(plot.background = element_rect(fill = "#53625C"), 
-        panel.background = element_rect(fill = "#53625C", colour="#53625C"),
-        plot.title= element_text(size=15,color="#FFFFFF",face="bold"),
+  scale_color_manual(values=c("#D1AC00", "#F47D20","#FFFFFF")) +
+  theme(legend.position="none",panel.grid = element_line(colour = "#53625C",linewidth  = 0),
+        plot.background = element_rect(fill = "#1d1e1e", colour="#1d1e1e"), 
+        panel.background = element_rect(fill = "#1d1e1e", colour="#1d1e1e"),
+        plot.title= element_text(size=15,color="#FFFFFF",face="bold",hjust = 0.5),
         axis.text.x=element_text(colour="#FFFFFF"),
+        axis.text.y=element_text(colour="#FFFFFF"),
         axis.title.y = element_text(colour="#FFFFFF"),
         axis.title.x = element_text(colour="#FFFFFF"),
-        legend.background = element_rect(fill = "#53625C"),
+        legend.background = element_rect(fill = "#1d1e1e"),
         legend.title = element_text(size=15,color="#FFFFFF",face="bold"),
-        legend.text = element_text(colour="#FFFFFF")) +
+        legend.text = element_text(colour="#FFFFFF"),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   transition_reveal(along = date) + view_follow()
 
-p <- p + guides(colour = guide_legend("Legend"))
-
+p <- p +  guides(fill="none")# + guides(colour = guide_legend(""))
 p
+
 
 animate(p,nframes = 800, fps = 10)
 anim_save("EUR_dollar.gif", animation = last_animation())
