@@ -59,7 +59,7 @@ p <- p +  guides(fill="none")# + guides(colour = guide_legend(""))
 p
 
 
-animate(p,nframes = 800, fps = 10)
-anim_save("EUR_dollar.gif", animation = last_animation())
+animate(p,nframes = 2000, fps = 25, renderer = av_renderer())
+anim_save("EUR_dollar.mp4", animation = last_animation())
 
 
