@@ -85,5 +85,15 @@ mkHandlerValidator handler x r ctx =
     where
         info :: TxInfo -- Creating an instance to access the pending transactions and related types.
         info = scriptContextTxInfo ctx 
+
+        -- function to get the input utxo from the ScriptContext
+        ownInput :: TxOut
+        ownInput = case findOwnInput ctx of
+            Nothing -> traceError "handler input missing"
+            Just i  -> txInInfoResolved i
+
+        -- function to check if the input utxo has the NFT
+        inputHasNFT :: Bool
+        inputHasNFT = assetClassValueOf (txOutValue ownInput) (handlerAsset handler) == 1
 ​
 
