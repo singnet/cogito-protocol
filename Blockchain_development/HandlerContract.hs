@@ -109,3 +109,18 @@ mkHandlerValidator handler x r ctx =
         -- function to check that a valid datum is present in the utxo
         validOutputDatum :: Bool
         validOutputDatum = isJust outputDatum
+
+
+--data Handling Provide instance of the ValidatorTypes class to record Datum and Redeemer type 
+data Handling
+instance Scripts.ValidatorTypes Handling where
+    type instance DatumType Handling = Bool
+    type instance RedeemerType Handling = HandlerRedeemer
+
+--function that Compile mkHandlerValidator to Plutus Core 
+typedHandlerValidator :: Handler -> Scripts.TypedValidator Handling
+typedHandlerValidator handler = Scripts.mkTypedValidator @Handling
+    ($$(PlutusTx.compile [|| mkHandlerValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode handler)
+    $$(PlutusTx.compile [|| wrap ||])
+ where
+    wrap = Scripts.wrapValidator @Bool @HandlerRedeemer --add a wrap function to be able to translate the strong types from the low level version. 
