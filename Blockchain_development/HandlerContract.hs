@@ -63,4 +63,12 @@ handlerTokenName = TokenName emptyByteString
 handlerAsset :: Handler -> AssetClass
 handlerAsset handler = AssetClass (hSymbol handler, handlerTokenName)
 
+-- function that extracts the datum from utxo
+{-# INLINABLE handlerValue #-}
+handlerValue :: TxOut -> (DatumHash -> Maybe Datum) -> Maybe Bool
+handlerValue o f = do
+    dh      <- txOutDatumHash o
+    Datum d <- f dh
+    PlutusTx.fromData d
+
     
