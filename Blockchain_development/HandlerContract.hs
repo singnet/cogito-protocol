@@ -58,5 +58,9 @@ PlutusTx.unstableMakeIsData ''HandlerRedeemer
 handlerTokenName :: TokenName
 handlerTokenName = TokenName emptyByteString
 
+{- A function that creates an AssetClass by taking the CurrencySymbol designated for the NFT from the Handler Data Type, and the handlerTokenName for the NFT that is initially set to emptyByteString.-}
+{-# INLINABLE handlerAsset #-} -- Making our function INLINABLE so that the data structure is suitable to compile to Plutus. 
+handlerAsset :: Handler -> AssetClass
+handlerAsset handler = AssetClass (hSymbol handler, handlerTokenName)
 
     
