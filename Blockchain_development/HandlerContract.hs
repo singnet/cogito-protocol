@@ -96,4 +96,12 @@ mkHandlerValidator handler x r ctx =
         inputHasNFT :: Bool
         inputHasNFT = assetClassValueOf (txOutValue ownInput) (handlerAsset handler) == 1
 ​
+        --A Function that checks if we have exactly one output UTXO and returns that UTXO to us.
+        ownOutput :: TxOut
+        ownOutput = case getContinuingOutputs ctx of
+            [o] -> o
+            _   -> traceError "expected exactly one handler output"
 
+        --A Function that checks if the NFT is present in output UTXO
+        outputHasNFT :: Bool
+        outputHasNFT = assetClassValueOf (txOutValue ownOutput) (handlerAsset handler) == 1
