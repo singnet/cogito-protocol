@@ -71,4 +71,19 @@ handlerValue o f = do
     Datum d <- f dh
     PlutusTx.fromData d
 
-    
+
+{-# INLINABLE mkHandlerValidator #-}
+mkHandlerValidator :: Handler -> Bool -> HandlerRedeemer -> ScriptContext -> Bool
+mkHandlerValidator handler x r ctx =
+    traceIfFalse "token missing from input"  inputHasToken  && 
+    traceIfFalse "token missing from output" outputHasToken && 
+    case r of -- HandlerRedemmer's value deciding whether to update/change the previously set STATE (valid for the superuser only) or to use the handler contract.
+        Update -> traceIfFalse "operator signature missing" (txSignedBy info $ hOperator handler) && -- checking if the contract is singed by the superuser whose PubKeyHash is stored in hOperator.
+                  traceIfFalse "invalid output datum"       validOutputDatum -- Checks if there is a STATE to change.
+        Use    -> traceIfFalse "handler value changed"       (outputDatum == Just x) -- checking to see if the datum value from the previous UTXO matches with the one we get from our off-chain code.
+​
+    where
+        info :: TxInfo -- Creating an instance to access the pending transactions and related types.
+        info = scriptContextTxInfo ctx 
+​
+
