@@ -124,3 +124,13 @@ typedHandlerValidator handler = Scripts.mkTypedValidator @Handling
     $$(PlutusTx.compile [|| wrap ||])
  where
     wrap = Scripts.wrapValidator @Bool @HandlerRedeemer --add a wrap function to be able to translate the strong types from the low level version. 
+
+​--function that creates a validator
+handlerValidator :: Handler -> Validator
+handlerValidator = Scripts.validatorScript . typedHandlerValidator
+​
+​--function that generate the script address
+handlerAddress :: Handler -> Ledger.Address
+handlerAddress = scriptAddress . handlerValidator
+
+
