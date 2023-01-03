@@ -105,3 +105,7 @@ mkHandlerValidator handler x r ctx =
         --A Function that checks if the NFT is present in output UTXO
         outputHasNFT :: Bool
         outputHasNFT = assetClassValueOf (txOutValue ownOutput) (handlerAsset handler) == 1
+
+        -- function to check that a valid datum is present in the utxo
+        validOutputDatum :: Bool
+        validOutputDatum = isJust outputDatum
