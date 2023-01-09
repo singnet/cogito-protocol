@@ -1,0 +1,3 @@
+[submodule "Blockchain_development/Blockchain_development/plutus-starter"]
+	path = Blockchain_development/Blockchain_development/plutus-starter
+	url = git@github.com:lewiEyasu/plutus-starter.git

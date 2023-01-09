@@ -126,7 +126,7 @@ typedHandlerValidator handler = Scripts.mkTypedValidator @Handling
     ($$(PlutusTx.compile [|| mkHandlerValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode handler)
     $$(PlutusTx.compile [|| wrap ||])
  where
-    wrap = Scripts.wrapValidator @Bool @HandlerRedeemer --add a wrap function to be able to translate the strong types from the low level version. 
+    wrap = Scripts.mkUntypedValidator @Bool @HandlerRedeemer --add a wrap function to be able to translate the strong types from the low level version. 
 
 ​--function that creates a validator
 handlerValidator :: Handler -> Validator
