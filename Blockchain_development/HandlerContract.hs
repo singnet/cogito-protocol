@@ -106,6 +106,9 @@ mkHandlerValidator handler x r ctx =
         outputHasNFT :: Bool
         outputHasNFT = assetClassValueOf (txOutValue ownOutput) (handlerAsset handler) == 1
 
+        outputDatum :: Maybe Bool
+        outputDatum = handlerValue ownOutput (`findDatum` info)
+
         -- function to check that a valid datum is present in the utxo
         validOutputDatum :: Bool
         validOutputDatum = isJust outputDatum
