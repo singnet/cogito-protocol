@@ -4,7 +4,7 @@
 
 This project gives a simple starter project for using the Plutus Platform.
 
-## Setting up
+## Setting ups 
 
 
 ### VSCode devcontainer
