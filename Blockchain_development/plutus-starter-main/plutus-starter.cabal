@@ -41,7 +41,7 @@ common lang
 library
     import: lang
     exposed-modules:
-      MyModule
+      Handler
       Plutus.Contracts.Game
     build-depends:
       base >= 4.9 && < 5,
