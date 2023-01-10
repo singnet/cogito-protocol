@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Handler
+module HandlerContract
 ( Handler (..)
 , HandlerRedeemer (..)
 , handlerTokenName

@@ -13,8 +13,8 @@ version:            0.1.0.0
 
 license: Apache-2.0
 license-files: LICENSE
-author:             Your name
-maintainer:         Your email
+author:             iCogLabs
+maintainer:         iCogLabs
 
 -- A copyright notice.
 -- copyright:
@@ -41,12 +41,12 @@ common lang
 library
     import: lang
     exposed-modules:
-      Handler
-      Plutus.Contracts.Game
+      HandlerContract
     build-depends:
       base >= 4.9 && < 5,
       aeson -any,
       bytestring -any,
+      cardano-api,
       containers -any,
       freer-extras -any,
       playground-common -any,
@@ -56,48 +56,8 @@ library
       plutus-ledger-constraints -any,
       plutus-tx -any,
       plutus-tx-plugin -any,
-      plutus-script-utils -any,
+      serialise,
       text -any,
       lens -any,
-    hs-source-dirs: src examples/src
+    hs-source-dirs: src
 
-test-suite plutus-example-projects-test
-  import: lang
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  hs-source-dirs: examples/test
-  other-modules:
-    Spec.Game
-  build-depends:
-    plutus-tx -any,
-    plutus-tx-plugin,
-    plutus-contract -any,
-    plutus-pab -any,
-    plutus-ledger -any,
-    plutus-starter -any
-  build-depends:
-    base >=4.9 && <5,
-    tasty -any,
-    tasty-hunit -any,
-    text -any,
-    tasty-hedgehog >=0.2.0.0
-
-
-executable plutus-starter-pab
-  import: lang
-  main-is: Main.hs
-  hs-source-dirs: pab
-  ghc-options:
-    -threaded
-  build-depends:
-    base >= 4.9 && < 5,
-    data-default -any,
-    plutus-contract -any,
-    plutus-pab -any,
-    plutus-starter -any,
-    aeson -any,
-    freer-simple -any,
-    prettyprinter -any,
-    freer-extras -any,
-    plutus-ledger -any,
-    openapi3 -any,
