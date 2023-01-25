@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Week06.Oracle.Core
+module HandlerContract
 ( Handler (..)
 , HandlerRedeemer (..)
 , handlerTokenName
@@ -35,9 +35,10 @@ import           Ledger.Ada           as Ada
 import           Ledger.Value
 import           Playground.Contract  (ToSchema)
 import           Plutus.Contract      as Contract
+import           Plutus.V1.Ledger.Api (Address, ScriptContext, Validator, Value, Datum(Datum), DatumHash(DatumHash), Redeemer(Redeemer))
 import qualified PlutusTx
 import           PlutusTx.Prelude     hiding (Semigroup(..), unless)
-import           Plutus.Contracts.Currency as Currency
+--import           Plutus.Contracts.Currency as Currency
 import           Prelude              (Semigroup (..), Show (..), String)
 import qualified Prelude
 
@@ -47,6 +48,8 @@ data Handler = Handler
     { hSymbol   :: !CurrencySymbol
     , hOperator :: !PubKeyHash
     } deriving (Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)   
+
+PlutusTx.makeLift ''Handler
 
 data HandlerRedeemer = Update | Use
     deriving Show    
@@ -69,19 +72,18 @@ handlerValue :: TxOut -> (DatumHash -> Maybe Datum) -> Maybe Bool
 handlerValue o f = do
     dh      <- txOutDatumHash o
     Datum d <- f dh
-    PlutusTx.fromData d
+    PlutusTx.fromBuiltinData d
 
 
 {-# INLINABLE mkHandlerValidator #-}
 mkHandlerValidator :: Handler -> Bool -> HandlerRedeemer -> ScriptContext -> Bool
 mkHandlerValidator handler x r ctx =
-    traceIfFalse "token missing from input"  inputHasToken  && 
-    traceIfFalse "token missing from output" outputHasToken && 
+    traceIfFalse "token missing from input"  inputHasNFT  && 
+    traceIfFalse "token missing from output" outputHasNFT && 
     case r of -- HandlerRedemmer's value deciding whether to update/change the previously set STATE (valid for the superuser only) or to use the handler contract.
         Update -> traceIfFalse "operator signature missing" (txSignedBy info $ hOperator handler) && -- checking if the contract is singed by the superuser whose PubKeyHash is stored in hOperator.
                   traceIfFalse "invalid output datum"       validOutputDatum -- Checks if there is a STATE to change.
         Use    -> traceIfFalse "handler value changed"       (outputDatum == Just x) -- checking to see if the datum value from the previous UTXO matches with the one we get from our off-chain code.
-​
     where
         info :: TxInfo -- Creating an instance to access the pending transactions and related types.
         info = scriptContextTxInfo ctx 
@@ -95,7 +97,6 @@ mkHandlerValidator handler x r ctx =
         -- function to check if the input utxo has the NFT
         inputHasNFT :: Bool
         inputHasNFT = assetClassValueOf (txOutValue ownInput) (handlerAsset handler) == 1
-​
         --A Function that checks if we have exactly one output UTXO and returns that UTXO to us.
         ownOutput :: TxOut
         ownOutput = case getContinuingOutputs ctx of
@@ -105,6 +106,9 @@ mkHandlerValidator handler x r ctx =
         --A Function that checks if the NFT is present in output UTXO
         outputHasNFT :: Bool
         outputHasNFT = assetClassValueOf (txOutValue ownOutput) (handlerAsset handler) == 1
+
+        outputDatum :: Maybe Bool
+        outputDatum = handlerValue ownOutput (`findDatum` info)
 
         -- function to check that a valid datum is present in the utxo
         validOutputDatum :: Bool
@@ -123,14 +127,10 @@ typedHandlerValidator handler = Scripts.mkTypedValidator @Handling
     ($$(PlutusTx.compile [|| mkHandlerValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode handler)
     $$(PlutusTx.compile [|| wrap ||])
  where
-    wrap = Scripts.wrapValidator @Bool @HandlerRedeemer --add a wrap function to be able to translate the strong types from the low level version. 
-
-​--function that creates a validator
-handlerValidator :: Handler -> Validator
+    wrap = Scripts.mkUntypedValidator @Bool @HandlerRedeemer 
+--add a wrap function to be able to translate the strong types from the low level version. 
+handlerValidator :: Handler ->  Scripts.Validator
 handlerValidator = Scripts.validatorScript . typedHandlerValidator
-​
-​--function that generate the script address
+
 handlerAddress :: Handler -> Ledger.Address
 handlerAddress = scriptAddress . handlerValidator
-
-
