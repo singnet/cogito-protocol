@@ -11,42 +11,51 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module HandlerContract
-( Handler (..)
+module GCOIN.HandlerContract
+( findHandlerOutput
+, Handler (..)
 , HandlerRedeemer (..)
 , handlerTokenName
-, handlerValue
+, handlerDatum
 , handlerAsset
+, HandlerSchema
 , typedHandlerValidator
 , handlerValidator
 , handlerAddress
+, runhandler
+, startHandler
 ) where
 
+
 import           Control.Monad        hiding (fmap)
+import           Control.Monad.Freer.Extras as Extras
 import           Data.Aeson           (FromJSON, ToJSON)
 import           Data.Monoid          (Last (..))
 import qualified Data.Map             as Map
-import           Data.Text            (Text)
+import           Data.Text            (Text, pack)
+import           Data.Default               (Default (..))
 import           GHC.Generics         (Generic)
 import           Ledger               hiding (singleton)
 import           Ledger.Constraints   as Constraints
 import qualified Ledger.Typed.Scripts as Scripts
 import           Ledger.Ada           as Ada
 import           Ledger.Value
-import           Playground.Contract  (ToSchema)
+import           Ledger.Address()
 import           Plutus.Contract      as Contract
-import           Plutus.V1.Ledger.Api (Address, ScriptContext, Validator, Value, Datum(Datum), DatumHash(DatumHash), Redeemer(Redeemer))
+import           Plutus.V1.Ledger.Api --(Address, ScriptContext, Validator, Value, Datum(Datum), DatumHash(DatumHash), Redeemer(Redeemer))
 import qualified PlutusTx
 import           PlutusTx.Prelude     hiding (Semigroup(..), unless)
---import           Plutus.Contracts.Currency as Currency
-import           Prelude              (Semigroup (..), Show (..), String)
+import           Plutus.Contracts.Currency as Currency
+import           Prelude              (IO, Semigroup (..), Show (..), String)
 import qualified Prelude
+import           Wallet.Emulator.Wallet  
+import           Plutus.Trace.Emulator      as Emulator      
 
 
 
 data Handler = Handler
     { hSymbol   :: !CurrencySymbol
-    , hOperator :: !PubKeyHash
+    , hOperator :: !PaymentPubKeyHash
     } deriving (Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)   
 
 PlutusTx.makeLift ''Handler
@@ -66,14 +75,12 @@ handlerTokenName = TokenName emptyByteString
 handlerAsset :: Handler -> AssetClass
 handlerAsset handler = AssetClass (hSymbol handler, handlerTokenName)
 
--- function that extracts the datum from utxo
-{-# INLINABLE handlerValue #-}
-handlerValue :: TxOut -> (DatumHash -> Maybe Datum) -> Maybe Bool
-handlerValue o f = do
-    dh      <- txOutDatumHash o
-    Datum d <- f dh
-    PlutusTx.fromBuiltinData d
 
+{-# INLINABLE handlerDatum #-}
+handlerDatum :: Maybe Datum -> Maybe Bool
+handlerDatum md = do
+    Datum d <- md
+    PlutusTx.fromBuiltinData d
 
 {-# INLINABLE mkHandlerValidator #-}
 mkHandlerValidator :: Handler -> Bool -> HandlerRedeemer -> ScriptContext -> Bool
@@ -81,7 +88,7 @@ mkHandlerValidator handler x r ctx =
     traceIfFalse "token missing from input"  inputHasNFT  && 
     traceIfFalse "token missing from output" outputHasNFT && 
     case r of -- HandlerRedemmer's value deciding whether to update/change the previously set STATE (valid for the superuser only) or to use the handler contract.
-        Update -> traceIfFalse "operator signature missing" (txSignedBy info $ hOperator handler) && -- checking if the contract is singed by the superuser whose PubKeyHash is stored in hOperator.
+        Update -> traceIfFalse "operator signature missing" (txSignedBy info $ unPaymentPubKeyHash $ hOperator handler) && -- checking if the contract is singed by the superuser whose PubKeyHash is stored in hOperator.
                   traceIfFalse "invalid output datum"       validOutputDatum -- Checks if there is a STATE to change.
         Use    -> traceIfFalse "handler value changed"       (outputDatum == Just x) -- checking to see if the datum value from the previous UTXO matches with the one we get from our off-chain code.
     where
@@ -107,8 +114,11 @@ mkHandlerValidator handler x r ctx =
         outputHasNFT :: Bool
         outputHasNFT = assetClassValueOf (txOutValue ownOutput) (handlerAsset handler) == 1
 
+        -- outputDatum :: Maybe Bool
+        -- outputDatum = handlerValue ownOutput (`findDatum` info)
+
         outputDatum :: Maybe Bool
-        outputDatum = handlerValue ownOutput (`findDatum` info)
+        outputDatum = handlerDatum $ txOutDatumHash ownOutput >>= flip findDatum info 
 
         -- function to check that a valid datum is present in the utxo
         validOutputDatum :: Bool
@@ -132,5 +142,24 @@ typedHandlerValidator handler = Scripts.mkTypedValidator @Handling
 handlerValidator :: Handler ->  Scripts.Validator
 handlerValidator = Scripts.validatorScript . typedHandlerValidator
 
+--create an address for the Validator script 
 handlerAddress :: Handler -> Ledger.Address
 handlerAddress = scriptAddress . handlerValidator
+
+--mint NFT token and retrun Handler data type
+startHandler ::  Contract w s Text Handler
+startHandler = do
+    pkh <- Contract.ownFirstPaymentPubKeyHash
+    osc <- mapError (pack . show) (mintContract pkh [(handlerTokenName, 1)] :: Contract w s CurrencyError OneShotCurrency)
+    let cs     = Currency.currencySymbol osc
+        handler = Handler
+            { hSymbol   = cs
+            , hOperator = pkh
+            }
+ 
+    Contract.logInfo @String $ "started handler " ++ show handler
+    return handler    
+
+
+
+

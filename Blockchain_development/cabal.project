@@ -1,6 +1,6 @@
 index-state: 2022-02-22T20:47:03Z
 
-packages: ./.
+packages: plutus-starter.cabal
 
 -- You never, ever, want this.
 write-ghc-environment-files: never
@@ -33,7 +33,6 @@ source-repository-package
     plutus-tx-constraints
     plutus-use-cases
     web-ghc
-
 
 -- The following sections are copied from the 'plutus-apps' repository cabal.project at the revision
 -- given above.
