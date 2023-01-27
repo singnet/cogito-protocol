@@ -193,3 +193,17 @@ updatehandler handler x = do
             ledgerTx <- submitTxConstraintsWith @Handling lookups tx
             void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
             Contract.logInfo @String $ "updated handler value to " ++ show x
+
+
+--update Endpoint
+type HandlerSchema =  Endpoint "update" Bool
+
+--A function that combines startOracle and updateOracle functions.
+runhandler ::  Contract (Last Handler) HandlerSchema Text ()
+runhandler = do
+    handler <- startHandler
+    tell $ Last $ Just handler
+    go handler
+  where
+    go :: Handler -> Contract (Last Handler) HandlerSchema Text a
+    go handler = awaitPromise (endpoint @"update" $ updatehandler handler)  >> go handler
