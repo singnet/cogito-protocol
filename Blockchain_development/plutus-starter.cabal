@@ -41,7 +41,8 @@ common lang
 library
     import: lang
     exposed-modules:
-      HandlerContract
+      GCOIN.HandlerContract
+      ,GCOIN.TestHandler
     build-depends:
       base >= 4.9 && < 5,
       aeson -any,
@@ -49,13 +50,16 @@ library
       cardano-api,
       containers -any,
       freer-extras -any,
+      data-default,
       playground-common -any,
       plutus-contract -any,
+      plutus-core,
       plutus-ledger -any,
       plutus-ledger-api -any,
       plutus-ledger-constraints -any,
       plutus-tx -any,
       plutus-tx-plugin -any,
+      plutus-use-cases,
       serialise,
       text -any,
       lens -any,
