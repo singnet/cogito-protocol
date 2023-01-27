@@ -47,3 +47,25 @@ checkHandler handler = do
         Nothing        -> return ()
         Just (_, _, x) -> Contract.logInfo $ "Handler value: " ++ show x
     Contract.waitNSlots 1 >> checkHandler handler
+
+
+myTrace :: EmulatorTrace ()
+myTrace = do
+    h1 <- activateContractWallet (knownWallet 1) $ runhandler
+
+    void $ Emulator.waitNSlots 1
+    void $ getHandler h1
+    void $ Emulator.waitNSlots 1
+
+    callEndpoint @"update" h1 True
+    void $ Emulator.waitNSlots 1
+
+    callEndpoint @"update" h1 False
+    void $ Emulator.waitNSlots 1
+  where
+    getHandler :: ContractHandle (Last Handler) HandlerSchema Text -> EmulatorTrace Handler
+    getHandler h = do
+        l <- observableState h
+        case l of
+            Last Nothing       -> Emulator.waitNSlots 1 >> getHandler h
+            Last (Just handler) -> Extras.logInfo (show handler) >> return handler
