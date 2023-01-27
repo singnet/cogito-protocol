@@ -160,6 +160,15 @@ startHandler = do
     Contract.logInfo @String $ "started handler " ++ show handler
     return handler    
 
-
-
+--Take Handler as parameter and find the utxo that have the NFT 
+findHandlerOutput :: Handler -> Contract w s Text (Maybe (TxOutRef, ChainIndexTxOut, Bool))
+findHandlerOutput handler = do
+    utxos <- utxosAt $ handlerAddress handler
+    return $ do
+        (oref, o) <- find f $ Map.toList utxos
+        dat       <- handlerDatum $ either (const Nothing) Just $ _ciTxOutDatum o
+        return (oref, o, dat)
+  where
+    f :: (TxOutRef, ChainIndexTxOut) -> Bool
+    f (_, o) = assetClassValueOf (_ciTxOutValue o) (handlerAsset handler) == 1
 
