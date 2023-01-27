@@ -207,3 +207,21 @@ runhandler = do
   where
     go :: Handler -> Contract (Last Handler) HandlerSchema Text a
     go handler = awaitPromise (endpoint @"update" $ updatehandler handler)  >> go handler
+
+myTrace :: EmulatorTrace ()
+myTrace = do
+    h1 <- activateContractWallet (knownWallet 1) $ runhandler
+    void $ Emulator.waitNSlots 1
+    void $ getHandler h1
+    void $ Emulator.waitNSlots 1
+    callEndpoint @"update" h1 True
+    void $ Emulator.waitNSlots 1
+    callEndpoint @"update" h1 False
+    void $ Emulator.waitNSlots 1
+  where
+    getHandler :: ContractHandle (Last Handler) HandlerSchema Text -> EmulatorTrace Handler
+    getHandler h = do
+        l <- observableState h
+        case l of
+            Last Nothing       -> Emulator.waitNSlots 1 >> getHandler h
+            Last (Just handler) -> Extras.logInfo (show handler) >> return handler
