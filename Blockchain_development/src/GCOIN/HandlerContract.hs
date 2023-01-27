@@ -92,6 +92,7 @@ mkHandlerValidator handler x r ctx =
     case r of -- HandlerRedemmer's value deciding whether to update/change the previously set STATE (valid for the superuser only) or to use the handler contract.
         Update -> traceIfFalse "operator signature missing" (txSignedBy info $ unPaymentPubKeyHash $ hOperator handler) && -- checking if the contract is singed by the superuser whose PubKeyHash is stored in hOperator.
                   traceIfFalse "invalid output datum"       validOutputDatum -- Checks if there is a STATE to change.
+                  traceIfFalse "The datum value is not changed" (outputDatum /= Just x) --Checks if the datum value is changed 
         Use    -> traceIfFalse "handler value changed"       (outputDatum == Just x) -- checking to see if the datum value from the previous UTXO matches with the one we get from our off-chain code.
     where
         info :: TxInfo -- Creating an instance to access the pending transactions and related types.
@@ -207,21 +208,3 @@ runhandler = do
   where
     go :: Handler -> Contract (Last Handler) HandlerSchema Text a
     go handler = awaitPromise (endpoint @"update" $ updatehandler handler)  >> go handler
-
-myTrace :: EmulatorTrace ()
-myTrace = do
-    h1 <- activateContractWallet (knownWallet 1) $ runhandler
-    void $ Emulator.waitNSlots 1
-    void $ getHandler h1
-    void $ Emulator.waitNSlots 1
-    callEndpoint @"update" h1 True
-    void $ Emulator.waitNSlots 1
-    callEndpoint @"update" h1 False
-    void $ Emulator.waitNSlots 1
-  where
-    getHandler :: ContractHandle (Last Handler) HandlerSchema Text -> EmulatorTrace Handler
-    getHandler h = do
-        l <- observableState h
-        case l of
-            Last Nothing       -> Emulator.waitNSlots 1 >> getHandler h
-            Last (Just handler) -> Extras.logInfo (show handler) >> return handler
