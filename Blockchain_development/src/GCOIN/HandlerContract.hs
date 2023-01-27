@@ -174,3 +174,22 @@ findHandlerOutput handler = do
     f :: (TxOutRef, ChainIndexTxOut) -> Bool
     f (_, o) = assetClassValueOf (_ciTxOutValue o) (handlerAsset handler) == 1
 
+
+-- A function to create a value and to update the Datum at the script address.
+updatehandler :: Handler -> Bool -> Contract w s Text ()
+updatehandler handler x = do
+    m <- findHandlerOutput handler
+    let c = Constraints.mustPayToTheScript x $ assetClassValue (handlerAsset handler) 1 <> Ada.lovelaceValueOf (2000000)
+    case m of
+        Nothing -> do
+            ledgerTx <- submitTxConstraints (typedHandlerValidator handler) c
+            void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+            Contract.logInfo @String $ "set initial handler value to " ++ show x
+        Just (oref, o,  _) -> do
+            let lookups = Constraints.unspentOutputs (Map.singleton oref o)     <>
+                          Constraints.typedValidatorLookups (typedHandlerValidator handler) <>
+                          Constraints.otherScript (handlerValidator handler)
+                tx      = c <> Constraints.mustSpendScriptOutput oref (Redeemer $ PlutusTx.toBuiltinData Update)
+            ledgerTx <- submitTxConstraintsWith @Handling lookups tx
+            void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+            Contract.logInfo @String $ "updated handler value to " ++ show x
