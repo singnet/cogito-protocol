@@ -199,7 +199,7 @@ updatehandler handler x = do
 --update Endpoint
 type HandlerSchema =  Endpoint "update" Bool
 
---A function that combines startOracle and updateOracle functions.
+--A function that combines startHandler and updateHandler functions.
 runhandler ::  Contract (Last Handler) HandlerSchema Text ()
 runhandler = do
     handler <- startHandler
