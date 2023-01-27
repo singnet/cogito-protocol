@@ -91,7 +91,7 @@ mkHandlerValidator handler x r ctx =
     traceIfFalse "token missing from output" outputHasNFT && 
     case r of -- HandlerRedemmer's value deciding whether to update/change the previously set STATE (valid for the superuser only) or to use the handler contract.
         Update -> traceIfFalse "operator signature missing" (txSignedBy info $ unPaymentPubKeyHash $ hOperator handler) && -- checking if the contract is singed by the superuser whose PubKeyHash is stored in hOperator.
-                  traceIfFalse "invalid output datum"       validOutputDatum -- Checks if there is a STATE to change.
+                  traceIfFalse "invalid output datum"       validOutputDatum &&  -- Checks if there is a STATE to change.
                   traceIfFalse "The datum value is not changed" (outputDatum /= Just x) --Checks if the datum value is changed 
         Use    -> traceIfFalse "handler value changed"       (outputDatum == Just x) -- checking to see if the datum value from the previous UTXO matches with the one we get from our off-chain code.
     where
