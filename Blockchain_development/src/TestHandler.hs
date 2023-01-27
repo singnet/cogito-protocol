@@ -40,3 +40,10 @@ test = runEmulatorTraceIO' def emCfg myTrace
     v :: Value
     v = Ada.lovelaceValueOf  10000000
     
+checkHandler :: Handler -> Contract () w Text ()
+checkHandler handler = do
+    m <- findHandlerOutput handler
+    case m of
+        Nothing        -> return ()
+        Just (_, _, x) -> Contract.logInfo $ "Handler value: " ++ show x
+    Contract.waitNSlots 1 >> checkHandler handler
