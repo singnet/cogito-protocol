@@ -1,4 +1,4 @@
-<h1 align="center">Welcome to Blockchain_development 👋</h1>
+<h1 align="center">Welcome to Cogito Blockchain_development 👋</h1>
 <p>
   <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-blue.svg?cacheSeconds=2592000" />
   <a href="https://cogito-protocol-1.gitbook.io/cogito-whitepaper/" target="_blank">
@@ -6,9 +6,6 @@
   </a>
   <a href="#" target="_blank">
     <img alt="License: MIT license" src="https://img.shields.io/badge/License-MIT license-yellow.svg" />
-  </a>
-  <a href="https://twitter.com/https:\/\/twitter.com\/cogitoprotocol" target="_blank">
-    <img alt="Twitter: https:\/\/twitter.com\/cogitoprotocol" src="https://img.shields.io/twitter/follow/https:\/\/twitter.com\/cogitoprotocol.svg?style=social" />
   </a>
 </p>
 
