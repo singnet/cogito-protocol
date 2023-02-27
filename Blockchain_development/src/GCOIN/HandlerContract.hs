@@ -14,9 +14,10 @@
 module GCOIN.HandlerContract
 ( findHandlerOutput
 , Handler (..)
+, HandlerDatum(..)
 , HandlerRedeemer (..)
 , handlerTokenName
-, handlerDatum
+, handlerValue
 , handlerAsset
 , HandlerSchema
 , typedHandlerValidator
@@ -35,7 +36,7 @@ import qualified Data.Map             as Map
 import           Data.Text            (Text, pack)
 import           Data.Default               (Default (..))
 import           GHC.Generics         (Generic)
-import           Ledger               hiding (singleton)
+import           Ledger               hiding (singleton, Mint)
 import           Ledger.Constraints   as Constraints
 import qualified Ledger.Typed.Scripts as Scripts
 import           Ledger.Ada           as Ada
@@ -46,13 +47,11 @@ import           Plutus.V1.Ledger.Api --(Address, ScriptContext, Validator, Valu
 import qualified PlutusTx
 import           PlutusTx.Prelude     hiding (Semigroup(..), unless)
 import           Plutus.Contracts.Currency as Currency
-import           Prelude              (IO, Semigroup (..), Show (..), String)
+import           Prelude              (IO, Semigroup (..), Show (..), String, Double, Num)
 import qualified Prelude
 import           Wallet.Emulator.Wallet  
 import           Plutus.Trace.Emulator      as Emulator      
-
-
-
+-- import Data.Bool (Bool(False))
 
 
 data Handler = Handler
@@ -62,10 +61,18 @@ data Handler = Handler
 
 PlutusTx.makeLift ''Handler
 
-data HandlerRedeemer = Update | Use
+data HandlerRedeemer = Update | Mint
     deriving Show    
 
 PlutusTx.unstableMakeIsData ''HandlerRedeemer  
+
+data HandlerDatum = HandlerDatum
+    { state         :: !Bool
+    , exchangeRate  :: !Integer
+    } deriving (Show,  Generic, FromJSON, ToJSON)
+    
+PlutusTx.unstableMakeIsData ''HandlerDatum
+-- PlutusTx.makeLift ''HandlerDatum
 
 -- creating a tokenname
 {-# INLINABLE handlerTokenName #-}
@@ -78,22 +85,23 @@ handlerAsset :: Handler -> AssetClass
 handlerAsset handler = AssetClass (hSymbol handler, handlerTokenName)
 
 
-{-# INLINABLE handlerDatum #-}
-handlerDatum :: Maybe Datum -> Maybe Bool
-handlerDatum md = do
+{-# INLINABLE handlerValue #-}
+handlerValue :: Maybe Datum -> Maybe HandlerDatum
+handlerValue md = do
     Datum d <- md
     PlutusTx.fromBuiltinData d
 
 {-# INLINABLE mkHandlerValidator #-}
-mkHandlerValidator :: Handler -> Bool -> HandlerRedeemer -> ScriptContext -> Bool
+mkHandlerValidator :: Handler -> HandlerDatum -> HandlerRedeemer -> ScriptContext -> Bool
 mkHandlerValidator handler x r ctx =
     traceIfFalse "token missing from input"  inputHasNFT  && 
     traceIfFalse "token missing from output" outputHasNFT && 
+     traceIfFalse "wrong pkh" (txSignedBy (scriptContextTxInfo ctx) $ unPaymentPubKeyHash $ hOperator handler) &&
     case r of -- HandlerRedemmer's value deciding whether to update/change the previously set STATE (valid for the superuser only) or to use the handler contract.
         Update -> traceIfFalse "operator signature missing" (txSignedBy info $ unPaymentPubKeyHash $ hOperator handler) && -- checking if the contract is singed by the superuser whose PubKeyHash is stored in hOperator.
-                  traceIfFalse "invalid output datum"       validOutputDatum &&  -- Checks if there is a STATE to change.
-                  traceIfFalse "The datum value is not changed" (outputDatum /= Just x) --Checks if the datum value is changed 
-        Use    -> traceIfFalse "handler value changed"       (outputDatum == Just x) -- checking to see if the datum value from the previous UTXO matches with the one we get from our off-chain code.
+                  traceIfFalse "invalid output datum"      validOutputDatum  &&  -- Checks if there is a STATE to change.
+                  traceIfFalse "The datum value is not changed" (not getState) --Checks if the datum value is changed 
+        Mint    -> traceIfFalse "handler value changed"      getState -- checking to see if the datum value from the previous UTXO matches with the one we get from our off-chain code.
     where
         info :: TxInfo -- Creating an instance to access the pending transactions and related types.
         info = scriptContextTxInfo ctx 
@@ -120,18 +128,26 @@ mkHandlerValidator handler x r ctx =
         -- outputDatum :: Maybe Bool
         -- outputDatum = handlerValue ownOutput (`findDatum` info)
 
-        outputDatum :: Maybe Bool
-        outputDatum = handlerDatum $ txOutDatumHash ownOutput >>= flip findDatum info 
+        outputDatum :: Maybe HandlerDatum
+        outputDatum = handlerValue $ txOutDatumHash ownOutput >>= flip findDatum info 
 
         -- function to check that a valid datum is present in the utxo
         validOutputDatum :: Bool
         validOutputDatum = isJust outputDatum
 
+        getState :: Bool
+        getState  = case outputDatum of
+            Just x -> check x
+            _      -> False
+            where 
+                check :: HandlerDatum -> Bool
+                check da = (state da == state x) && (exchangeRate da == exchangeRate x)
+
 
 --data Handling Provide instance of the ValidatorTypes class to record Datum and Redeemer type 
 data Handling
 instance Scripts.ValidatorTypes Handling where
-    type instance DatumType Handling = Bool
+    type instance DatumType Handling = HandlerDatum
     type instance RedeemerType Handling = HandlerRedeemer
 
 --function that Compile mkHandlerValidator to Plutus Core 
@@ -140,7 +156,7 @@ typedHandlerValidator handler = Scripts.mkTypedValidator @Handling
     ($$(PlutusTx.compile [|| mkHandlerValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode handler)
     $$(PlutusTx.compile [|| wrap ||])
  where
-    wrap = Scripts.mkUntypedValidator @Bool @HandlerRedeemer 
+    wrap = Scripts.mkUntypedValidator @HandlerDatum @HandlerRedeemer 
 --add a wrap function to be able to translate the strong types from the low level version. 
 handlerValidator :: Handler ->  Scripts.Validator
 handlerValidator = Scripts.validatorScript . typedHandlerValidator
@@ -164,12 +180,12 @@ startHandler = do
     return handler    
 
 --Take Handler as parameter and find the utxo that have the NFT 
-findHandlerOutput :: Handler -> Contract w s Text (Maybe (TxOutRef, ChainIndexTxOut, Bool))
+findHandlerOutput :: Handler -> Contract w s Text (Maybe (TxOutRef, ChainIndexTxOut, HandlerDatum))
 findHandlerOutput handler = do
     utxos <- utxosAt $ handlerAddress handler
     return $ do
         (oref, o) <- find f $ Map.toList utxos
-        dat       <- handlerDatum $ either (const Nothing) Just $ _ciTxOutDatum o
+        dat       <- handlerValue $ either (const Nothing) Just $ _ciTxOutDatum o
         return (oref, o, dat)
   where
     f :: (TxOutRef, ChainIndexTxOut) -> Bool
@@ -177,7 +193,7 @@ findHandlerOutput handler = do
 
 
 -- A function to create a value and to update the Datum at the script address.
-updatehandler :: Handler -> Bool -> Contract w s Text ()
+updatehandler :: Handler -> HandlerDatum -> Contract w s Text ()
 updatehandler handler x = do
     m <- findHandlerOutput handler
     let c = Constraints.mustPayToTheScript x $ assetClassValue (handlerAsset handler) 1 <> Ada.lovelaceValueOf (2000000)
@@ -197,7 +213,7 @@ updatehandler handler x = do
 
 
 --update Endpoint
-type HandlerSchema =  Endpoint "update" Bool
+type HandlerSchema =  Endpoint "update" HandlerDatum
 
 --A function that combines startHandler and updateHandler functions.
 runhandler ::  Contract (Last Handler) HandlerSchema Text ()

@@ -41,8 +41,9 @@ common lang
 library
     import: lang
     exposed-modules:
-      GCOIN.HandlerContract
-      ,GCOIN.TestHandler
+      GCOIN.HandlerContract,
+      GCOIN.TestHandler,
+      GCOIN.Mint
     build-depends:
       base >= 4.9 && < 5,
       aeson -any,
@@ -60,6 +61,7 @@ library
       plutus-tx -any,
       plutus-tx-plugin -any,
       plutus-use-cases,
+      plutus-script-utils -any,
       serialise,
       text -any,
       lens -any,

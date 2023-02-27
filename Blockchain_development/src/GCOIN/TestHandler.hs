@@ -57,10 +57,10 @@ myTrace = do
     void $ getHandler h1
     void $ Emulator.waitNSlots 1
 
-    callEndpoint @"update" h1 True
+    callEndpoint @"update" h1 test_1
     void $ Emulator.waitNSlots 1
 
-    callEndpoint @"update" h1 False
+    callEndpoint @"update" h1 test_2
     void $ Emulator.waitNSlots 1
   where
     getHandler :: ContractHandle (Last Handler) HandlerSchema Text -> EmulatorTrace Handler
@@ -69,3 +69,6 @@ myTrace = do
         case l of
             Last Nothing       -> Emulator.waitNSlots 1 >> getHandler h
             Last (Just handler) -> Extras.logInfo (show handler) >> return handler
+
+    test_1 = HandlerDatum {state = True, exchangeRate = 123456 }
+    test_2 = HandlerDatum {state = False, exchangeRate = 123456 }        
