@@ -1,2 +1,25 @@
 Blockchain_development/dist
 Blockchain_development/dist-*
+
+# dependencies
+MintAndBurn_frontend/node_modules
+MintAndBurn_frontend/.pnp
+MintAndBurn_frontend/.pnp.js
+
+# testing
+MintAndBurn_frontend/coverage
+
+# production
+MintAndBurn_frontend/build
+
+# misc
+MintAndBurn_frontend/.DS_Store
+MintAndBurn_frontend/.env.local
+MintAndBurn_frontend/.env.development.local
+MintAndBurn_frontend/.env.test.local
+MintAndBurn_frontend/.env.production.local
+
+MintAndBurn_frontend/npm-debug.log*
+MintAndBurn_frontend/yarn-debug.log*
+MintAndBurn_frontend/yarn-error.log*
+MintAndBurn_frontend/package-lock.json
