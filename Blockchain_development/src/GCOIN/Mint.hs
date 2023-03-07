@@ -88,3 +88,9 @@ mkPolicy handler tn addr re ctx =
        in case ins of
             [o] -> o
             _ -> traceError "expected exactly one handler input"
+
+    -- function to check the actual exchange rate and state of handler.
+    handlerValue' :: HandlerDatum
+    handlerValue' = case (handlerValue (txOutDatumHash ownInput >>= flip findDatum info)) of
+      Nothing -> traceError "handler value not found"
+      Just x -> x
