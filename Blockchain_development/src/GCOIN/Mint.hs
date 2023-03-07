@@ -61,3 +61,17 @@ lovelaces = Ada.getLovelace . Ada.fromValue
 {-# INLINEABLE gcoinTokenName #-}
 gcoinTokenName :: TokenName
 gcoinTokenName = tokenName "GCOIN"
+
+-- mkPolicy function is a parameterized Policy with Three parameters: Handler(import from HandlerContract), TokenName and the Address of the Handler.
+{-# INLINEABLE mkPolicy #-}
+mkPolicy :: Handler -> TokenName -> Address -> MintRedeemer -> ScriptContext -> Bool
+mkPolicy handler tn addr re ctx =
+  case re of
+    MintCoin mintAmount -> traceIfFalse "insufficient ada value to mint" $ checkMintValue (calculateValue mintAmount mintRate)
+    BurnCoin burnAmount user ->
+      traceIfFalse "Invalid ada value " (feesPaid (getInput (user)) user burnAmount burnRate)
+        && traceIfFalse "The amount is a positive number. " (burnAmount < 0)
+        && traceIfFalse "GCOIN in the specified quantity was not burned." (checkBurnValue user burnAmount)
+  where
+    info :: TxInfo -- Creating an instance to access the pending transactions and related types.
+    info = scriptContextTxInfo ctx
