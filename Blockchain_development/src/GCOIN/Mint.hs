@@ -56,3 +56,8 @@ PlutusTx.makeLift ''MintRedeemer
 {-# INLINEABLE lovelaces #-}
 lovelaces :: Value -> Integer
 lovelaces = Ada.getLovelace . Ada.fromValue
+
+-- naming a token.
+{-# INLINEABLE gcoinTokenName #-}
+gcoinTokenName :: TokenName
+gcoinTokenName = tokenName "GCOIN"
