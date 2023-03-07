@@ -50,3 +50,9 @@ data MintRedeemer = MintCoin Integer | BurnCoin Integer PaymentPubKeyHash
 
 PlutusTx.unstableMakeIsData ''MintRedeemer
 PlutusTx.makeLift ''MintRedeemer
+
+
+-- lovelaces function used to extract a number of lovelace from a Value type.
+{-# INLINEABLE lovelaces #-}
+lovelaces :: Value -> Integer
+lovelaces = Ada.getLovelace . Ada.fromValue
