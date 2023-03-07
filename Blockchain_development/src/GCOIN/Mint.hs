@@ -75,3 +75,16 @@ mkPolicy handler tn addr re ctx =
   where
     info :: TxInfo -- Creating an instance to access the pending transactions and related types.
     info = scriptContextTxInfo ctx
+
+    -- function to get the input utxo that have NFT.
+    ownInput :: TxOut
+    ownInput =
+      let ins =
+            [ o
+              | i <- txInfoInputs info,
+                let o = txInInfoResolved i,
+                inputHasNFT o
+            ]
+       in case ins of
+            [o] -> o
+            _ -> traceError "expected exactly one handler input"
