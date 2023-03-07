@@ -94,3 +94,16 @@ mkPolicy handler tn addr re ctx =
     handlerValue' = case (handlerValue (txOutDatumHash ownInput >>= flip findDatum info)) of
       Nothing -> traceError "handler value not found"
       Just x -> x
+
+    -- getInput function takes PaymentPubKeyHash and get input utxo.
+    getInput :: PaymentPubKeyHash -> TxOut
+    getInput pkh =
+      let os =
+            [ o
+              | i <- txInfoInputs info,
+                let o = txInInfoResolved i,
+                txOutAddress o == pubKeyHashAddress pkh Nothing
+            ]
+       in case os of
+            [o] -> o
+            _ -> traceError "expected exactly one inputs from given PaymentPubKeyHash"
