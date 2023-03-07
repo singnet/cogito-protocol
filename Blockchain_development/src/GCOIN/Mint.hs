@@ -43,3 +43,10 @@ import Text.Printf (printf)
 import Wallet.Emulator.Wallet
 import Prelude (IO, Semigroup (..), Show (..), String, div)
 import Prelude qualified
+
+-- In the MintRedeemer datatype, MintCoin takes the mint amount, and BurnCoin takes both the burn amount and the user PaymentPubKeyHash.
+data MintRedeemer = MintCoin Integer | BurnCoin Integer PaymentPubKeyHash
+  deriving (Show)
+
+PlutusTx.unstableMakeIsData ''MintRedeemer
+PlutusTx.makeLift ''MintRedeemer
