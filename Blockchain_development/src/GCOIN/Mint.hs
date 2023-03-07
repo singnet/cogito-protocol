@@ -95,7 +95,7 @@ mkPolicy handler tn addr re ctx =
       Nothing -> traceError "handler value not found"
       Just x -> x
 
-    -- getInput function takes PaymentPubKeyHash and get input utxo.
+    -- getInput function takes PaymentPubKeyHash and return input utxo.
     getInput :: PaymentPubKeyHash -> TxOut
     getInput pkh =
       let os =
