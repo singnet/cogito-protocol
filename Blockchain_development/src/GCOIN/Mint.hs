@@ -107,3 +107,7 @@ mkPolicy handler tn addr re ctx =
        in case os of
             [o] -> o
             _ -> traceError "expected exactly one inputs from given PaymentPubKeyHash"
+    
+    -- inputHasNFT function checks that input contains the handler nft.
+    inputHasNFT :: TxOut -> Bool
+    inputHasNFT i = assetClassValueOf (txOutValue i) (handlerAsset handler) == 1
